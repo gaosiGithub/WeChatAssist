@@ -37,6 +37,7 @@ public class AutoReplyService extends AccessibilityService {
     AccessibilityNodeInfo itemNodeinfo;
     private KeyguardManager.KeyguardLock kl;
     private Handler handler = new Handler();
+    private String lastContent;
 
 
     /**
@@ -56,6 +57,7 @@ public class AutoReplyService extends AccessibilityService {
                     for (CharSequence text : texts) {
                         String content = text.toString();
                         if (!TextUtils.isEmpty(content)) {
+                            lastContent = content;
                             if (isScreenLocked()) {
                                 locked = true;
                                 wakeAndUnlock();
@@ -212,9 +214,19 @@ public class AutoReplyService extends AccessibilityService {
 
     @SuppressLint("NewApi")
     private boolean fill() {
+        String content = "你好，你是哪里的？";
+        if (lastContent != null) {
+            if (lastContent.contains("河南")) {
+                content = "你好，你是河南哪里的？";
+            } else if (lastContent.contains("郑州")) {
+                content = "请加入郑州群34531233";
+            } else {
+                content = "你好，你是哪里的？";
+            }
+        }
         AccessibilityNodeInfo rootNode = getRootInActiveWindow();
         if (rootNode != null) {
-            return findEditText(rootNode, "正在忙,稍后回复你");
+            return findEditText(rootNode, content);
         }
         return false;
     }
@@ -222,7 +234,6 @@ public class AutoReplyService extends AccessibilityService {
 
     private boolean findEditText(AccessibilityNodeInfo rootNode, String content) {
         int count = rootNode.getChildCount();
-
         android.util.Log.d("maptrix", "root class=" + rootNode.getClassName() + "," + rootNode.getText() + "," + count);
         for (int i = 0; i < count; i++) {
             AccessibilityNodeInfo nodeInfo = rootNode.getChild(i);
