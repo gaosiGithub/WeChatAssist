@@ -83,7 +83,6 @@ public class AutoReplyService extends AccessibilityService {
                             } else {
                                 locked = false;
                                 android.util.Log.d("maptrix", "the screen is unlocked");
-                                // 监听到微信红包的notification，打开通知
                                 if (isAppForeground(MM_PNAME)) {
                                     background = false;
                                     android.util.Log.d("maptrix", "is mm in foreground");
@@ -106,7 +105,7 @@ public class AutoReplyService extends AccessibilityService {
                     }
                 }
                 break;
-            case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:
+            case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:  //窗口变化监听事件
                 android.util.Log.d("maptrix", "get type window down event");
                 if (!hasAction) break;
                 itemNodeinfo = null;
