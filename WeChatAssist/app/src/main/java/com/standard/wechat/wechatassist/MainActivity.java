@@ -1,5 +1,7 @@
 package com.standard.wechat.wechatassist;
 
+import android.content.Intent;
+import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -14,6 +16,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        initView();
+        initEvents();
     }
 
     private void initView(){
@@ -30,6 +34,9 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     public void onClick(View view) {
         switch (view.getId()){
             case R.id.btn_openService:
+                final String mAction = Settings.ACTION_ACCESSIBILITY_SETTINGS;//系统辅助功能Action
+                Intent intent = new Intent(mAction);
+                startActivity(intent); //点击开启系统辅助功能界面，在这里可以开启程序对应的辅助服务
                 break;
             case R.id.btn_closeService:
                 break;
