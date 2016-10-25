@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 startActivity(intent); //点击开启系统辅助功能界面，在这里可以开启程序对应的辅助服务
                 break;
             case R.id.btn_closeService:
+                finish();
                 break;
             default:
                 break;

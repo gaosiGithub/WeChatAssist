@@ -22,10 +22,10 @@ import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
-import android.widget.ListView;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.Random;
 
 public class AutoReplyService extends AccessibilityService {
 
@@ -40,6 +40,7 @@ public class AutoReplyService extends AccessibilityService {
     private Handler handler = new Handler();
     private String lastContent;
 
+    private String currentWindow = "";
 
     /**
      * 必须重写的方法，响应各种事件。
@@ -107,10 +108,12 @@ public class AutoReplyService extends AccessibilityService {
                 }
                 break;
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:  //窗口变化监听事件
-                android.util.Log.d("maptrix", "get type window down event");
-                if (!hasAction) break;
+                android.util.Log.d("maptrix", "get type window down event TYPE_WINDOW_STATE_CHANGED");
+                android.util.Log.d("WINDOW_STATE_CHANGED", "" + event.getClassName().toString());
+//                if (!hasAction) break;
                 itemNodeinfo = null;
                 String className = event.getClassName().toString();
+                android.util.Log.d("WINDOW_STATE_CHANGED", "" + event.getClassName().toString());
 //                if (className.equals("com.tencent.mm.ui.LauncherUI")) {
 //                    if (fill()) {
 //                        send();
@@ -132,137 +135,181 @@ public class AutoReplyService extends AccessibilityService {
 //                        }
 //                    }
 //                }
-                performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
-                if (className.equals("com.tencent.mm.ui.LauncherUI")) {
-                    pressBtnByText("com.tencent.mm:id/addressui_content", "android.widget.TextView", "通讯录");
-//                    pressBtnByViewId("com.tencent.mm:id/address_contactlist", "android.widget.ListView", "");
-                    chat();
-                    groupList();
-                    chatInfo();
 
+                if (className.equals("com.tencent.mm.ui.LauncherUI")) {
+                    currentWindow = "com.tencent.mm.ui.LauncherUI";
+                    performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+                    straight();
                 }
+                if (className.equals("com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI")) {
+                    currentWindow = "com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI";
+                    addFreinds(getRootInActiveWindow());
+                }
+                if (className.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
+                    currentWindow = "com.tencent.mm.ui.contact.SelectContactUI";
+                    chooseFriend(getRootInActiveWindow());
+                }
+
 
 //                back2Home();
 //                release();
-                hasAction = false;
+//                hasAction = false;
+                break;
+            case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
+                android.util.Log.d("CONTENT_CHANGE_TEXT", "" + "tetetetetetetetetetetet");
+                android.util.Log.d("CONTENT_CHANGE_TEXT", "" + event.getClassName().toString());
+                if (event.getClassName().equals("android.widget.EditText") &&
+                        currentWindow.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
+                    pressFreind();
+                    pressOKBtn();
+                }
+                if (event.getClassName().equals("android.widget.EditText") &&
+                        currentWindow.equals("com.tencent.mm.ui.LauncherUI")) {
+                    chatInfo(getRootInActiveWindow());
+                }
                 break;
         }
     }
 
-    private void pressBtnByText(String widgetId, String widgetType, String btnText) {
+    private void straight() {
         AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
         if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText(btnText);
-            android.util.Log.i("maptrix", "list count" + list.size());
-            if (list != null && list.size() > 0) {
-                int i = 0;
-                for (AccessibilityNodeInfo n : list) {
-                    if (n.getClassName().equals(widgetType) && n.isEnabled()) {
-                        i++;
-                        android.util.Log.i("maptrix", "click true-----" + i);
-                        android.util.Log.i("maptrix", n.getParent().getClassName().toString());
-                        android.util.Log.i("maptrix", n.getViewIdResourceName() + "");
-                        n.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    }
-                }
-
-            }
-        }
-    }
-
-    private void pressBtnByViewId(String widgetId, String widgetType, String btnText) {
-        AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
-        if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId(widgetId);
-            android.util.Log.i("maptrix", "list count" + list.size());
-            if (list != null && list.size() > 0) {
-                int i = 0;
-                for (AccessibilityNodeInfo n : list) {
-                    if (n.getClassName().equals(widgetType) && n.isEnabled()) {
-                        i++;
-                        android.util.Log.i("maptrix", "click true-----" + i);
-                        android.util.Log.i("maptrix", n.getParent().getClassName().toString());
-                        n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    }
-                }
-
-            }
-        }
-    }
-
-    private void chat() {
-        AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
-        if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/container");
+            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/conversation_item_ll");
+            android.util.Log.i("straight", "list count" + list.size());
             if (list != null && list.size() > 0) {
                 for (AccessibilityNodeInfo n : list) {
-                    if (n.getClassName().equals("android.widget.LinearLayout") && n.isEnabled()) {
-                        if (n.getChildCount() > 0) {
-                            if (n.getChild(0).getChildCount() > 0) {
-                                if (n.getChild(0).getChild(0).getText().toString().equals("群聊")) {
-                                    //这里有两个群聊，不知道为什么，所以return
-                                    n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-//                                    break;
-                                }
-                            }
+                    if (n.getContentDescription() != null) {
+                        android.util.Log.i("straight", "des:" + n.getContentDescription().toString());
+                        if (n.getClassName().toString().equals("android.widget.LinearLayout") &&
+                                n.getContentDescription().toString().contains("郑州")) {
+                            n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                         }
                     }
                 }
-
             }
         }
+        addText(nodeInfo);
     }
 
-    private void chat2() {
-        AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
-        if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/addressui_content");
-            if (list != null && list.size() > 0) {
-                for (AccessibilityNodeInfo n : list) {
-                    if (n.getClassName().equals("android.widget.TextView") && n.isEnabled() &&
-                            n.getText().toString().equals("群聊")) {
-                        android.util.Log.i("maptrix chat2", n.getParent().getClassName().toString());
-                        android.util.Log.i("maptrix chat2", n.getParent().getParent().getClassName().toString());
-                        n.getParent().getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    }
-                }
+    private void chatInfo(AccessibilityNodeInfo rootNode) {
+        int count = rootNode.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo nodeInfo = rootNode.getChild(i);
 
+            if (nodeInfo == null) {
+                continue;
             }
-        }
-    }
 
-    private void groupList() {
-        AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
-        if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByText("郑州");
-            if (list != null && list.size() > 0) {
-                for (AccessibilityNodeInfo n : list) {
-                    if (n.getClassName().equals("android.widget.TextView") && n.isEnabled()) {
-                        n.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                    }
+            if (nodeInfo.getContentDescription() != null) {
+                android.util.Log.i("chatInfo", "des:" + nodeInfo.getContentDescription().toString());
+                if (nodeInfo.getClassName().toString().equals("android.widget.TextView") &&
+                        nodeInfo.getContentDescription().toString().equals("聊天信息")) {
+                    nodeInfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
                 }
             }
+            chatInfo(nodeInfo);
         }
     }
 
-    private void chatInfo() {
-        AccessibilityNodeInfo nodeInfo = getRootInActiveWindow();
-        if (nodeInfo != null) {
-            List<AccessibilityNodeInfo> list = nodeInfo.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/action_bar");
+    private void addFreinds(AccessibilityNodeInfo rootNode) {
+        int count = rootNode.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo nodeInfo = rootNode.getChild(i);
+
+            if (nodeInfo == null) {
+                continue;
+            }
+
+            if (nodeInfo.getContentDescription() != null) {
+                android.util.Log.i("addFreinds", "des:" + nodeInfo.getContentDescription().toString());
+                if (nodeInfo.getClassName().toString().equals("android.widget.ImageView") &&
+                        nodeInfo.getContentDescription().toString().equals("添加成员")) {
+                    android.util.Log.i("addFreinds", "parent:" + nodeInfo.getParent().getClassName().toString());
+                    nodeInfo.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                }
+            }
+            addFreinds(nodeInfo);
+        }
+    }
+
+    private void chooseFriend(AccessibilityNodeInfo rootNode) {
+        if (rootNode != null) {
+            List<AccessibilityNodeInfo> list = rootNode.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/mutiselectcontact_edittext");
+            android.util.Log.i("chooseFriend", "list" + list.size() + "");
             if (list != null && list.size() > 0) {
-                list.get(0).getChild(1).getChild(0).performAction(AccessibilityNodeInfo.ACTION_CLICK);
-//                for (AccessibilityNodeInfo n : list) {
-//                    AccessibilityNodeInfo nodeInfo111 = n.getChild(1);
-//                    android.util.Log.i("maptrixchatinfo", n.getChild(1).getClassName().toString());
-//                    if (n.getChildCount() > 0) {
-//                        if (n.getContentDescription() != null) {
-//                            if (n.getChild(1).getContentDescription().toString().equals("聊天信息") && n.isEnabled()) {
-                                android.util.Log.i("maptrix", "聊天信息");
-//                                n.getChild(1).performAction(AccessibilityNodeInfo.ACTION_CLICK);
-//                            }
-//                        }
-//                    }
-//                }
+                for (AccessibilityNodeInfo n : list) {
+                    if (n.getClassName().equals("android.widget.EditText") && n.isEnabled() &&
+                            n.getText().toString().equals("搜索")) {
+                        android.util.Log.i("chooseFriend", "list" + n.getParent().getClassName());
+                        Bundle arguments = new Bundle();
+                        arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
+                                AccessibilityNodeInfo.MOVEMENT_GRANULARITY_WORD);
+                        arguments.putBoolean(AccessibilityNodeInfo.ACTION_ARGUMENT_EXTEND_SELECTION_BOOLEAN,
+                                true);
+                        n.performAction(AccessibilityNodeInfo.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY,
+                                arguments);
+                        n.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                        ClipData clip = ClipData.newPlainText("label", name);
+                        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        clipboardManager.setPrimaryClip(clip);
+                        n.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+                    }
+                }
+            }
+
+        }
+    }
+
+    private void addText(AccessibilityNodeInfo rootNode) {
+        if (rootNode != null) {
+            List<AccessibilityNodeInfo> list = rootNode.findAccessibilityNodeInfosByViewId("com.tencent.mm:id/chatting_content_et");
+            android.util.Log.i("addText", "list" + list.size() + "");
+            if (list != null && list.size() > 0) {
+                for (AccessibilityNodeInfo n : list) {
+                    if (n.getClassName().equals("android.widget.EditText") && n.isEnabled()) {
+                        Bundle arguments = new Bundle();
+                        arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
+                                AccessibilityNodeInfo.MOVEMENT_GRANULARITY_WORD);
+                        arguments.putBoolean(AccessibilityNodeInfo.ACTION_ARGUMENT_EXTEND_SELECTION_BOOLEAN,
+                                true);
+                        n.performAction(AccessibilityNodeInfo.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY,
+                                arguments);
+                        n.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
+                        ClipData clip = ClipData.newPlainText("label", "" + Math.random());
+                        ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                        clipboardManager.setPrimaryClip(clip);
+                        n.performAction(AccessibilityNodeInfo.ACTION_PASTE);
+                    }
+                }
+            }
+
+        }
+    }
+
+    private void pressFreind() {
+        List<AccessibilityNodeInfo> list = getRootInActiveWindow().findAccessibilityNodeInfosByViewId("com.tencent.mm:id/title_tv");
+        android.util.Log.i("chooseFriend", "list" + list.size() + "");
+        if (list != null && list.size() > 0) {
+            for (AccessibilityNodeInfo n : list) {
+                if (n.getClassName().equals("android.widget.TextView") && n.isEnabled() &&
+                        n.getText().toString().equals("健康养生")) {
+                    android.util.Log.i("chooseFriend", "list" + n.getParent().getClassName());
+                    n.getParent().performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                }
+            }
+        }
+    }
+
+    private void pressOKBtn(){
+        List<AccessibilityNodeInfo> list = getRootInActiveWindow().findAccessibilityNodeInfosByViewId("com.tencent.mm:id/action_option_style_button");
+        android.util.Log.i("pressOKBtn", "list" + list.size() + "");
+        if (list != null && list.size() > 0) {
+            for (AccessibilityNodeInfo n : list) {
+                if (n.getClassName().equals("android.widget.TextView") && n.isEnabled() &&
+                        n.getText().toString().contains("确定")) {
+                    android.util.Log.i("pressOKBtn", "list" + n.getParent().getClassName());
+                    n.performAction(AccessibilityNodeInfo.ACTION_CLICK);
+                }
             }
         }
     }
