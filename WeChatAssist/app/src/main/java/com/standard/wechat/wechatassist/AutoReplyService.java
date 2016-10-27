@@ -40,7 +40,8 @@ public class AutoReplyService extends AccessibilityService {
     private KeyguardManager.KeyguardLock kl;
     private Handler handler = new Handler();
     private String lastContent;
-    private String currentWindow = "";
+    private String currentWindow = "com.tencent.mm.ui.LauncherUI";
+    private boolean isFromNotification = false;
 
     /**
      * 必须重写的方法，响应各种事件。
@@ -50,10 +51,12 @@ public class AutoReplyService extends AccessibilityService {
     @Override
     public void onAccessibilityEvent(final AccessibilityEvent event) {
         int eventType = event.getEventType();
-        android.util.Log.d("onAccessibilityEvent", "eventType = " + eventType);
+        android.util.Log.d("EVENT_TYPE", " eventType = " + eventType);
         switch (eventType) {
             case AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED:// 通知栏事件
-                android.util.Log.d("NOTIFICATION_CHANGED", "get notification event");
+                android.util.Log.d("NOTIFICATION_CHANGED", "得到通知栏事件");
+                android.util.Log.d("NOTIFICATION_CHANGED", "event.className" + event.getClassName().toString());
+                isFromNotification = true;
                 List<CharSequence> texts = event.getText();
                 if (!texts.isEmpty()) {
                     for (CharSequence text : texts) {
@@ -81,6 +84,17 @@ public class AutoReplyService extends AccessibilityService {
                                     background = true;
                                     android.util.Log.d("maptrix", "is mm in background");
                                     sendNotifacationReply(event);
+                                    android.util.Log.d("maptrix", " currentWindow" + currentWindow);
+                                    if (currentWindow.equals("com.tencent.mm.ui.LauncherUI")) {
+                                        handler.postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (fill()) {
+                                                    send();
+                                                }
+                                            }
+                                        }, 1000);
+                                    }
                                 }
                             } else {
                                 locked = false;
@@ -101,6 +115,17 @@ public class AutoReplyService extends AccessibilityService {
                                     background = true;
                                     android.util.Log.d("maptrix", "is mm in background");
                                     sendNotifacationReply(event);
+                                    android.util.Log.d("maptrix", " currentWindow" + currentWindow);
+                                    if (currentWindow.equals("com.tencent.mm.ui.LauncherUI")) {
+                                        handler.postDelayed(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                if (fill()) {
+                                                    send();
+                                                }
+                                            }
+                                        }, 1000);
+                                    }
                                 }
                             }
                         }
@@ -108,58 +133,54 @@ public class AutoReplyService extends AccessibilityService {
                 }
                 break;
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:  //窗口变化监听事件
-//                if (!hasAction) break;
-                itemNodeinfo = null;
                 String className = event.getClassName().toString();
-                android.util.Log.d("WINDOW_STATE_CHANGED", " " + event.getClassName().toString());
-                if (className.equals("com.tencent.mm.ui.LauncherUI")) {
+                android.util.Log.d("WINDOW_STATE_CHANGED", " 得到窗口变化事件");
+                android.util.Log.d("WINDOW_STATE_CHANGED", " event.getClassName：" + event.getClassName().toString());
+
+                if (className.equals("com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI")) {
+                    currentWindow = "com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI";
+                }
+                if(className.equals("com.tencent.mm.ui.LauncherUI")){
+                    currentWindow = "com.tencent.mm.ui.LauncherUI";
+                }
+                if (className.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
+                    currentWindow = "com.tencent.mm.ui.contact.SelectContactUI";
+                }
+
+                if (className.equals("com.tencent.mm.ui.LauncherUI") && scontent != null
+                        && isFromNotification) {
+                    isFromNotification = false;
                     if (scontent.contains("郑州")) {
-                        currentWindow = "com.tencent.mm.ui.LauncherUI";
                         performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
                         pressBtnByViewId(1, 1, "com.tencent.mm:id/conversation_item_ll", "android.widget.LinearLayout", "", "郑州", SELF);
                         addText();
                         chatInfo(1, 2, getRootInActiveWindow());
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                pressBtnByViewId(1, 3, "com.tencent.mm:id/roominfo_img", "android.widget.ImageView", "", "添加成员", PARENT);
+                            }
+                        }, 1000);
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                chooseFriend(1, 4, "古法养生", getRootInActiveWindow());
+                            }
+                        }, 2000);
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                pressBtnByViewId(1, 5, "com.tencent.mm:id/title_tv", "android.widget.TextView", "古法养生", "", PARENT);
+                                pressBtnByViewId(1, 6, "com.tencent.mm:id/action_option_style_button", "android.widget.TextView", "确定", "", SELF);
+                            }
+                        }, 3000);
                     } else {
                         if (fill()) {
                             send();
-                        } else {
-                            if (itemNodeinfo != null) {
-                                itemNodeinfo.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-                                handler.postDelayed(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        if (fill()) {
-                                            send();
-                                        }
-                                        back2Home();
-                                        release();
-                                        hasAction = false;
-                                    }
-                                }, 1000);
-                                break;
-                            }
                         }
                         back2Home();
                         release();
-//                        hasAction = false;
                     }
-                }
-
-                if (className.equals("com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI")) {
-                    currentWindow = "com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI";
-                    pressBtnByViewId(1, 3, "com.tencent.mm:id/roominfo_img", "android.widget.ImageView", "", "添加成员", PARENT);
-                }
-                if (className.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
-                    currentWindow = "com.tencent.mm.ui.contact.SelectContactUI";
-                    chooseFriend(1, 4, name, getRootInActiveWindow());
-                }
-                break;
-            case AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED:
-                android.util.Log.d("CONTENT_CHANGE_TEXT", "" + event.getClassName().toString());
-                if (event.getClassName().equals("android.widget.EditText") &&
-                        currentWindow.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
-                    pressBtnByViewId(1, 5, "com.tencent.mm:id/title_tv", "android.widget.TextView", name, "", PARENT);
-                    pressBtnByViewId(1, 6, "com.tencent.mm:id/action_option_style_button", "android.widget.TextView", "确定", "", SELF);
                 }
                 break;
         }
