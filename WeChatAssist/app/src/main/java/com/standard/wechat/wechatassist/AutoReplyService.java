@@ -42,6 +42,7 @@ public class AutoReplyService extends AccessibilityService {
     private String lastContent;
     private String currentWindow = "com.tencent.mm.ui.LauncherUI";
     private boolean isFromNotification = false;
+    private boolean isGroupChat = false;
 
     /**
      * 必须重写的方法，响应各种事件。
@@ -116,16 +117,16 @@ public class AutoReplyService extends AccessibilityService {
                                     android.util.Log.d("maptrix", "is mm in background");
                                     sendNotifacationReply(event);
                                     android.util.Log.d("maptrix", " currentWindow" + currentWindow);
-                                    if (currentWindow.equals("com.tencent.mm.ui.LauncherUI")) {
-                                        handler.postDelayed(new Runnable() {
-                                            @Override
-                                            public void run() {
-                                                if (fill()) {
-                                                    send();
-                                                }
-                                            }
-                                        }, 1000);
-                                    }
+//                                    if (currentWindow.equals("com.tencent.mm.ui.LauncherUI")) {
+//                                        handler.postDelayed(new Runnable() {
+//                                            @Override
+//                                            public void run() {
+//                                                if (fill()) {
+//                                                    send();
+//                                                }
+//                                            }
+//                                        }, 1000);
+//                                    }
                                 }
                             }
                         }
@@ -134,47 +135,52 @@ public class AutoReplyService extends AccessibilityService {
                 break;
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:  //窗口变化监听事件
                 String className = event.getClassName().toString();
-//                String className = event.getClassName().toString();
                 android.util.Log.d("WINDOW_STATE_CHANGED", " 得到窗口变化事件");
                 android.util.Log.d("WINDOW_STATE_CHANGED", " event.getClassName：" + event.getClassName().toString());
 
                 if (className.equals("com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI")) {
                     currentWindow = "com.tencent.mm.plugin.chatroom.ui.ChatroomInfoUI";
                 }
-                if(className.equals("com.tencent.mm.ui.LauncherUI")){
+                if (className.equals("com.tencent.mm.ui.LauncherUI")) {
                     currentWindow = "com.tencent.mm.ui.LauncherUI";
                 }
                 if (className.equals("com.tencent.mm.ui.contact.SelectContactUI")) {
                     currentWindow = "com.tencent.mm.ui.contact.SelectContactUI";
                 }
 
+                isGroupChat(getRootInActiveWindow());
+                android.util.Log.i("isGroupChat", " isGroupChat:" + isGroupChat);
                 if (className.equals("com.tencent.mm.ui.LauncherUI") && scontent != null
-                        && isFromNotification) {
+                        && isFromNotification && !isGroupChat) {
                     isFromNotification = false;
                     if (scontent.contains("郑州")) {
                         performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
                         pressBtnByViewId(1, 1, "com.tencent.mm:id/conversation_item_ll", "android.widget.LinearLayout", "", "郑州", SELF);
-                        addText();
-                        chatInfo(1, 2, getRootInActiveWindow());
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                pressBtnByViewId(1, 3, "com.tencent.mm:id/roominfo_img", "android.widget.ImageView", "", "添加成员", PARENT);
+                                chatInfo(1, 2, getRootInActiveWindow());
                             }
                         }, 1000);
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                chooseFriend(1, 4, "古法养生", getRootInActiveWindow());
+                                pressBtnByViewId(1, 3, "com.tencent.mm:id/roominfo_img", "android.widget.ImageView", "", "添加成员", PARENT);
                             }
                         }, 2000);
                         handler.postDelayed(new Runnable() {
                             @Override
                             public void run() {
-                                pressBtnByViewId(1, 5, "com.tencent.mm:id/title_tv", "android.widget.TextView", "古法养生", "", PARENT);
-                                pressBtnByViewId(1, 6, "com.tencent.mm:id/action_option_style_button", "android.widget.TextView", "确定", "", SELF);
+                                chooseFriend(1, 4, name, getRootInActiveWindow());
                             }
                         }, 3000);
+                        handler.postDelayed(new Runnable() {
+                            @Override
+                            public void run() {
+                                pressBtnByViewId(1, 5, "com.tencent.mm:id/title_tv", "android.widget.TextView", name, "", PARENT);
+                                pressBtnByViewId(1, 6, "com.tencent.mm:id/action_option_style_button", "android.widget.TextView", "确定", "", SELF);
+                            }
+                        }, 4000);
                     } else {
                         if (fill()) {
                             send();
@@ -183,20 +189,36 @@ public class AutoReplyService extends AccessibilityService {
                         release();
                     }
                 }
+                if(isGroupChat){
+                    isGroupChat = false;
+                }
                 break;
         }
     }
 
-    //判断当前聊天界面是否是群聊天
-    private boolean isGroupChat(AccessibilityEvent event) {
-        android.util.Log.i("isGroupChat", "nodeInfoList:" + event);
-        if (event.getContentDescription() != null) {
-            if (event.getContentDescription().toString().contains("(") &&
-                    event.getContentDescription().toString().contains(")")) {
-                return true;
+    private void isGroupChat(AccessibilityNodeInfo rootNode) {
+        int count = rootNode.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo nodeInfo = rootNode.getChild(i);
+
+            if (nodeInfo == null) {
+                continue;
             }
+            if (nodeInfo.getText() != null) {
+                if (nodeInfo.getClassName().toString().equals("android.widget.TextView")) {
+                    android.util.Log.d("ISGROUPCHAT", " android.widget.TextView:" + nodeInfo.getText());
+                }
+            }
+
+            if (nodeInfo.getText() != null) {
+                if (nodeInfo.getClassName().toString().equals("android.widget.TextView") &&
+                        nodeInfo.getText().toString().contains("(") &&
+                        nodeInfo.getText().toString().contains(")")) {
+                    isGroupChat = true;
+                }
+            }
+            isGroupChat(nodeInfo);
         }
-        return false;
     }
 
     private void chatInfo(int type, int id, AccessibilityNodeInfo rootNode) {
@@ -216,30 +238,6 @@ public class AutoReplyService extends AccessibilityService {
                 }
             }
             chatInfo(1, 2, nodeInfo);
-        }
-    }
-
-    //用于引起当前activity发生变化，然后可获取当前activity节点
-    private void addText() {
-        List<AccessibilityNodeInfo> list = getRootInActiveWindow().findAccessibilityNodeInfosByViewId("com.tencent.mm:id/chatting_content_et");
-        android.util.Log.i("addText", "list" + list.size() + "");
-        if (list != null && list.size() > 0) {
-            for (AccessibilityNodeInfo n : list) {
-                if (n.getClassName().equals("android.widget.EditText") && n.isEnabled()) {
-                    Bundle arguments = new Bundle();
-                    arguments.putInt(AccessibilityNodeInfo.ACTION_ARGUMENT_MOVEMENT_GRANULARITY_INT,
-                            AccessibilityNodeInfo.MOVEMENT_GRANULARITY_WORD);
-                    arguments.putBoolean(AccessibilityNodeInfo.ACTION_ARGUMENT_EXTEND_SELECTION_BOOLEAN,
-                            true);
-                    n.performAction(AccessibilityNodeInfo.ACTION_PREVIOUS_AT_MOVEMENT_GRANULARITY,
-                            arguments);
-                    n.performAction(AccessibilityNodeInfo.ACTION_FOCUS);
-                    ClipData clip = ClipData.newPlainText("label", "" + Math.random());
-                    ClipboardManager clipboardManager = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    clipboardManager.setPrimaryClip(clip);
-                    n.performAction(AccessibilityNodeInfo.ACTION_PASTE);
-                }
-            }
         }
     }
 
