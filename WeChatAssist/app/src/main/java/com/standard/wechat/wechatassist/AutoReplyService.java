@@ -134,6 +134,7 @@ public class AutoReplyService extends AccessibilityService {
                 break;
             case AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED:  //窗口变化监听事件
                 String className = event.getClassName().toString();
+//                String className = event.getClassName().toString();
                 android.util.Log.d("WINDOW_STATE_CHANGED", " 得到窗口变化事件");
                 android.util.Log.d("WINDOW_STATE_CHANGED", " event.getClassName：" + event.getClassName().toString());
 
